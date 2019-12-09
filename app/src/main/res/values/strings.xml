@@ -1,0 +1,22 @@
+<resources>
+    <string name="app_name">Redmi K20 helyett Mi 9T</string>
+    <string name="buildprop">build.prop</string>
+    <string name="bootlogo">bootlogo</string>
+    <string name="bootanimation">bootanimation</string>
+    <string name="submit">csere</string>
+    <string name="cancel">mégse</string>
+    <string name="oldText">Redmi K20</string>
+    <string name="newText">Mi 9T</string>
+    <string name="to">helyett:   </string>
+    <string name="bin">/bin add ll, rw, ro</string>
+    <string name="watermark">watermark</string>
+    <string name="ll">ll</string>
+    <string name="nextCmd">ezt rövidíti:</string>
+    <string name="llCmd">ls -l</string>
+    <string name="rw">rw</string>
+    <string name="rwCmd">mount -o remount -rw</string>
+    <string name="roCmd">mount -o remount -r</string>
+    <string name="ro">ro</string>
+    <string name="wait">kis türelmet ...</string>
+    <string name="time">10 - 15 másodperc</string>
+</resources>
