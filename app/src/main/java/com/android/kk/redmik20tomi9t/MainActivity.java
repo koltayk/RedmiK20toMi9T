@@ -50,8 +50,8 @@ public class MainActivity extends AppCompatActivity {
     public static final String MOUNT_VENDOR_RO = "mount -o remount -r /vendor";
 
     public static final String BOOTLOGO = "/dev/block/sde46";
-    public static final String SYSTEM_MEDIA = "/system/media";
-    public static final String BOOTANIMATION_ZIP = "/bootanimation.zip";
+    public static final String SYSTEM_MEDIA = "/system/media/";
+    public static final String BOOTANIMATION_ZIP = "bootanimation.zip";
     public static final String BOOTANIM_PATH = SYSTEM_MEDIA + BOOTANIMATION_ZIP;
     public static final String SAVE = ".save";
 
@@ -84,7 +84,9 @@ public class MainActivity extends AppCompatActivity {
     private String errorMsg;
     private String newBootAnimPath;
     private String sha256sumOrig;
+    private String mi9t;
     private String davinciWebp;
+    private String davinciInWebp;
     private String davinciGlobalWebp;
     private String cameraDir;
     private String cameraApk;
@@ -130,9 +132,9 @@ public class MainActivity extends AppCompatActivity {
         this.checkBoxes = this.findViewById(R.id.checkBocxes);
         this.checkBoxes.removeAllViews();
 
-        this.filesDir = getFilesDir ().getPath();
+        this.filesDir = getFilesDir ().getPath() + "/";
         this.outPutText.text = "";
-        final String logDir = filesDir + "/log/";
+        final String logDir = filesDir + "log/";
         try {
             this.user = cmd("sh", "whoami").replace("\n", "");
             cmd("mkdir -m 777 " + logDir);
@@ -154,34 +156,43 @@ public class MainActivity extends AppCompatActivity {
             error(e);
             return;
         }
-        this.cameraDir = this.filesDir + "/Camera";
+        this.cameraDir = this.filesDir + "Camera";
         cmd("mkdir -m 777 " + cameraDir);
         cmd("chown " + this.user + ":" + this.user + " " + cameraDir);
+        boolean binNeeded = false;
+        final String ll = cmd("ls /bin/ll");
+        if (!ll.isEmpty()) {
+            binNeeded = true;
+        }
         state = State.INIT;
         File toZip = new File(this.cameraDir);
         final File zipfile = zipFolder(toZip);
         Log.d(TAG, "zipfile: " +zipfile.getAbsolutePath());
         InputStream rawBootLogo = getResources().openRawResource(R.raw.bootlogo9t);
         unZip(rawBootLogo, filesDir);
-        bootLogoDir = filesDir + "/LogoOrig/";
+        bootLogoDir = filesDir + "LogoOrig/";
         String bootLogosha2 = bootLogoDir + "logo.emmc.win.sha2";
-        String sha256sumPart = cmd("sha256sum " + BOOTLOGO).split(" ")[0];
+        String sha256sumPart = getSha256sum(BOOTLOGO);
         this.sha256sumOrig = cmd("cat " + bootLogosha2).split(" ")[0];
 
-        this.newBootAnimPath = filesDir + BOOTANIMATION_ZIP;
-        String sha256sumOld = cmd("sha256sum " + BOOTANIM_PATH).split(" ")[0];
-        String sha256sumNew = cmd("sha256sum " + this.newBootAnimPath).split(" ")[0];
+        this.newBootAnimPath = this.filesDir + BOOTANIMATION_ZIP;
+        String sha256sumOld = getSha256sum(BOOTANIM_PATH);
+        String sha256sumNew = getSha256sum(this.newBootAnimPath);
 
         this.cameraApk = "/system/priv-app/MiuiCamera/MiuiCamera.apk";
-        String cameraApkTemp = this.filesDir + "/MiuiCamera.apk";
+        String cameraApkTemp = this.filesDir + "MiuiCamera.apk";
         cmd("cp " + cameraApk + " " + cameraApkTemp);
         cmd("chown " + this.user + ":" + this.user + " " + cameraApkTemp);
         InputStream is = new FileInputStream(new File(cameraApkTemp));
         unZip(is, cameraDir);
+        this.mi9t = getRes(R.raw.mi9t, ".webp");
         this.davinciWebp = cameraDir + "/assets/watermarks/davinci.webp ";
+        this.davinciInWebp = cameraDir + "/assets/watermarks/davinciin.webp ";
         this.davinciGlobalWebp = cameraDir + "/assets/watermarks/davinci_global.webp ";
-        String sha256sumDavinciWebp = cmd("sha256sum " + davinciWebp).split(" ")[0];
-        String sha256sumDavinciGlobalWebp = cmd("sha256sum " + davinciGlobalWebp).split(" ")[0];
+        String sha256sumMi9tWebp = getSha256sum(this.filesDir + this.mi9t);
+        String sha256sumDavinciWebp = getSha256sum(this.davinciWebp);
+        String sha256sumDavinciInWebp = getSha256sum(this.davinciInWebp);
+        String sha256sumDavinciGlobalWebp = getSha256sum(davinciGlobalWebp);
 
         this.checkBoxes.addView(this.buildProp);
         if (!sha256sumOld.equals(sha256sumNew)) {   // nem a jó bootanimáció van
@@ -190,17 +201,21 @@ public class MainActivity extends AppCompatActivity {
         if (!sha256sumPart.equals(sha256sumOrig)) { // a partíció nem az új logo-t tartalmazza
             doSetChecked(this.bootLogo, true);
         }
-        if (!sha256sumDavinciWebp.equals(sha256sumDavinciGlobalWebp)) {
+        if (!sha256sumMi9tWebp.equals(sha256sumDavinciGlobalWebp)
+         || !sha256sumMi9tWebp.equals(sha256sumDavinciInWebp)
+         || !sha256sumMi9tWebp.equals(sha256sumDavinciWebp)) {
             doSetChecked(this.watermark, true);
         }
-        try {
-            final String ll = cmd("ls /bin/ll");
-        } catch (Exception e) {
+        if (binNeeded) {
             this.checkBoxes.addView(this.bin);
             this.checkBoxes.addView(this.ll);
             this.checkBoxes.addView(this.rw);
             this.checkBoxes.addView(this.ro);
         }
+    }
+
+    private String getSha256sum(String name) throws IOException, InterruptedException {
+        return cmd("sha256sum " + name).split(" ")[0];
     }
 
     private void error(Exception e) {
@@ -262,7 +277,7 @@ public class MainActivity extends AppCompatActivity {
 
             if (bootLogo.isChecked()){
                 String bootLogoPath = bootLogoDir + "logo.emmc.win";
-                String sha256sum = cmd("sha256sum " + bootLogoPath).split(" ")[0];
+                String sha256sum = getSha256sum(bootLogoPath);
                 if (sha256sum.equals(sha256sumOrig)) {
                     String fileLength = cmd("ls -l " + bootLogoPath).split(" ")[4];
                     String blockLength = cmd("blockdev --getsize64 " + BOOTLOGO).replace("\n", "");
@@ -293,16 +308,17 @@ public class MainActivity extends AppCompatActivity {
             }
 
             if (watermark.isChecked()){
-                ret = cmd("cp " + davinciWebp + davinciGlobalWebp);
+                saveFile(cameraApk);
+                ret = cmd("cp " + this.filesDir + this.mi9t + " " + this.davinciGlobalWebp); //a kicsomagolt MiuiCamera.apk-ban davinci_global.webp felülírása
+                ret = cmd("cp " + this.filesDir + this.mi9t + " " + this.davinciWebp); //a kicsomagolt MiuiCamera.apk-ban davinci.webp felülírása
+                ret = cmd("cp " + this.filesDir + this.mi9t + " " + this.davinciInWebp); //a kicsomagolt MiuiCamera.apk-ban davinciin.webp felülírása
                 File cameraApkMod = zipFolder(new File(cameraDir));
-                ret = cmd("cp " + cameraApkMod + " " + cameraApk);
+                ret = cmd("cp " + cameraApkMod + " " + cameraApk);  // a MiuiCamera.apk felülírása
 
-                InputStream rawWatermark = getResources().openRawResource(R.raw.davinci_main_space_custom_watermark);
-                String watermarkFileName = "davinci_main_space_custom_watermark.png";
-                String watermarkTempFilePath = this.filesDir + "/" + watermarkFileName;
-                String watermarkFilePath = "/data/data/com.android.camera/files/" + watermarkFileName;
-                writeFile(rawWatermark, watermarkTempFilePath);
-                ret = cmd("cp " + watermarkTempFilePath + " " + watermarkFilePath);
+                String watermarkFileName = getRes(R.raw.davinci_main_space_custom_watermark, ".png");
+                String watermarkPath = "/data/data/com.android.camera/files/" + watermarkFileName;
+                saveFile(watermarkPath);
+                ret = cmd("cp " + this.filesDir + watermarkFileName + " " + watermarkPath);
             }
 
             if (bin.isChecked()){
@@ -319,6 +335,7 @@ public class MainActivity extends AppCompatActivity {
         }
         finally {
             if (rw) {
+                Thread.sleep(3000);
                 ret = cmd(MOUNT_VENDOR_RO);
                 ret = cmd(MOUNT_RO);
             }
@@ -339,6 +356,15 @@ public class MainActivity extends AppCompatActivity {
         }
         doSetVisibility(cancel, View.VISIBLE);
         doSetText(cancel, "kilép");
+    }
+
+    private String getRes(int res, String typ) throws IOException, InterruptedException {
+        String ret;
+        InputStream rawWatermark = getResources().openRawResource(res);
+        String watermarkFileName = getResources().getResourceEntryName(res) + typ;
+        String watermarkTempFilePath = this.filesDir + watermarkFileName;
+        writeFile(rawWatermark, watermarkTempFilePath);
+        return watermarkFileName;
     }
 
     private void addCmd(String oldCmd, String newCmd) throws IOException, InterruptedException {
@@ -445,9 +471,7 @@ public class MainActivity extends AppCompatActivity {
 
     private String cmd(String sh, String command) throws IOException, InterruptedException {
         Log.d(TAG, command);
-        if (state != State.BEFORE) {
-            appendOutPut(command, "black");
-        }
+        appendOutPut(command, "black");
         Process process = Runtime.getRuntime().exec(new String[]{sh, "-c", command});
         process.waitFor();
         String errStream = readFullyAsString(process.getErrorStream(), Charset.defaultCharset().name());
@@ -458,8 +482,12 @@ public class MainActivity extends AppCompatActivity {
             appendOutPut(errStream, "red");
             throw new RuntimeException("hiba a következő parancsban: " + command + ", hibaüzenet: " + errStream);
         }
-        final String ret = outStream + errStream;
-        if (state != State.BEFORE) {
+        String ret = outStream + errStream;
+        if (state == State.BEFORE) {
+            appendOutPut(ret, "blue");
+            ret = errStream;
+        }
+        else {
             appendOutPut(ret, "blue");
         }
         return ret;
