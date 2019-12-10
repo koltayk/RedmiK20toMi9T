@@ -20,4 +20,6 @@ Az alkalmazás root jogosultságot kér, más jogosultság nem is kell neki. Az 
 
 Természetesen csak saját felelősségre használni, előtte feltétlen egy backup-ot csinálni.
 
+A program futásakor elég idegesítő lehet, hogy a magisk minden parancsra kiírja, hogy van root jogosultsága. Ezt azonban ki lehet kapcsolni: Magisk->Settings->Supeuser Notifications->None
+
 Ez a Mi 9T-re jó, a PRO esetén a bootlogo nem javallott, mert nem tudom, hogy ott is a `/dev/block/sde46` partíció a bootlogo, igaz, hogy a partíció hosszát ellenőrzöm és csak akkor írom felül, ha megegyezik a bootlogo fájl hosszával. A többi pont a PRO esetén is megy.
