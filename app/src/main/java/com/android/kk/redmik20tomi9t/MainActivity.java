@@ -136,8 +136,8 @@ public class MainActivity extends AppCompatActivity {
         this.outPutText.text = "";
         final String logDir = filesDir + "log/";
         try {
-            this.user = cmd("sh", "whoami").replace("\n", "");
-            cmd("mkdir -m 777 " + logDir);
+            this.user = cmd("sh", "whoami", false).replace("\n", "");
+            cmd("mkdir -m 777 " + logDir, true);
             cmd("chown " + this.user + ":" + this.user + " " + logDir);
         } catch (Exception e) {
             error(e);
@@ -157,13 +157,8 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
         this.cameraDir = this.filesDir + "Camera";
-        cmd("mkdir -m 777 " + cameraDir);
+        cmd("mkdir -m 777 " + cameraDir, true);
         cmd("chown " + this.user + ":" + this.user + " " + cameraDir);
-        boolean binNeeded = false;
-        final String ll = cmd("ls /bin/ll");
-        if (!ll.isEmpty()) {
-            binNeeded = true;
-        }
         state = State.INIT;
         File toZip = new File(this.cameraDir);
         final File zipfile = zipFolder(toZip);
@@ -206,7 +201,9 @@ public class MainActivity extends AppCompatActivity {
          || !sha256sumMi9tWebp.equals(sha256sumDavinciWebp)) {
             doSetChecked(this.watermark, true);
         }
-        if (binNeeded) {
+        String binLl = "/bin/ll";
+        final String lsLl = cmd("ls " + binLl, true);
+        if (!lsLl.equals(binLl + "\n")) {
             this.checkBoxes.addView(this.bin);
             this.checkBoxes.addView(this.ll);
             this.checkBoxes.addView(this.rw);
@@ -466,10 +463,14 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private String cmd(String command) throws IOException, InterruptedException {
-        return cmd("su", command);
+        return cmd("su", command, false);
     }
 
-    private String cmd(String sh, String command) throws IOException, InterruptedException {
+    private String cmd(String command, boolean ignoreError) throws IOException, InterruptedException {
+        return cmd("su", command, ignoreError);
+    }
+
+    private String cmd(String sh, String command, boolean ignoreError) throws IOException, InterruptedException {
         Log.d(TAG, command);
         appendOutPut(command, "black");
         Process process = Runtime.getRuntime().exec(new String[]{sh, "-c", command});
@@ -478,18 +479,12 @@ public class MainActivity extends AppCompatActivity {
         String outStream = readFullyAsString(process.getInputStream(), Charset.defaultCharset().name());
         Log.d(TAG, outStream);
         Log.d(TAG, errStream);
-        if (process.exitValue() != 0 && state != State.BEFORE) {
+        if (process.exitValue() != 0 && !ignoreError) {
             appendOutPut(errStream, "red");
             throw new RuntimeException("hiba a következő parancsban: " + command + ", hibaüzenet: " + errStream);
         }
         String ret = outStream + errStream;
-        if (state == State.BEFORE) {
-            appendOutPut(ret, "blue");
-            ret = errStream;
-        }
-        else {
-            appendOutPut(ret, "blue");
-        }
+        appendOutPut(ret, "blue");
         return ret;
     }
 
