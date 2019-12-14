@@ -16,10 +16,10 @@ Először is meg lehet adni az új elnevezést, "*Mi 9T*" van alapból beállít
 
 Az alkalmazás töbször is futtatható, a bootlogo, bootanimáció és vízjel esetében ha már egyszer megtörtént a csere, azt többször már nem ajánlja fel.
 
-Az alkalmazás root jogosultságot kér, más jogosultság nem is kell neki. Az alkalmazás root alatt kiadott parancsokat hajt végre, minden parancs protokollálva van, egyes parancsok eredménye kékkel, ha hiba történne az a parancs pirossal. A `grep` kb. fél percig tart, a többi már gyorsan megy. A végére kell görgetni, ott remélhetőleg egy zöld sor látszik majd.
+Az alkalmazás root jogosultságot kér, más jogosultság nem is kell neki. Az alkalmazás root alatt kiadott parancsokat hajt végre, minden parancs protokollálva van, egyes parancsok eredménye kékkel, ha hiba történne a hibaüzenet pirossal. A `grep` kb. fél percig tart, a többi már gyorsan megy. A végére kell görgetni, ott remélhetőleg egy zöld sor látszik majd. A log a `/data/user/0/com.android.kk.redmik20tomi9t/files/log/` könyvtárban `html` formában található.
 
 Természetesen csak saját felelősségre használni, előtte feltétlen egy backup-ot csinálni.
 
-A program futásakor elég idegesítő lehet, hogy a magisk minden parancsra kiírja, hogy van root jogosultsága. Ezt azonban ki lehet kapcsolni: Magisk->Settings->Supeuser Notifications->None
+A program futásakor elég idegesítő lehet, hogy a Magisk minden parancsra kiírja, hogy van root jogosultsága. Ezt azonban ki lehet kapcsolni: Magisk->Settings->Supeuser Notifications->None
 
-Ez a Mi 9T-re jó, a PRO esetén a bootlogo nem javallott, mert nem tudom, hogy ott is a `/dev/block/sde46` partíció a bootlogo, igaz, hogy a partíció hosszát ellenőrzöm és csak akkor írom felül, ha megegyezik a bootlogo fájl hosszával. A többi pont a PRO esetén is megy.
+Ez a "*Mi 9T*"-re jó, a PRO esetén a "*bootlogo*" nem javallott, mert nem tudom, hogy ott is a `/dev/block/sde46` partíció-e a "*bootlogo*". Igaz, hogy a partíció hosszát ellenőrzöm és csak akkor írom felül, ha megegyezik a "*bootlogo*" fájl hosszával. A többi pont a PRO esetén is megy.
