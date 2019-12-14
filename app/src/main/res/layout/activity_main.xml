@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/screen"
     android:orientation="vertical"
     android:layout_width="fill_parent"
     android:layout_height="fill_parent">
@@ -37,7 +38,7 @@
     </LinearLayout>
 
     <LinearLayout
-        android:id="@+id/checkBocxes"
+        android:id="@+id/checkBoxes"
         android:orientation="vertical"
         android:layout_marginTop="10dp"
         android:layout_width="match_parent"
@@ -207,11 +208,31 @@
             android:onClick="onClickCancel" />
     </LinearLayout>
 
-    <WebView
-        android:id="@+id/output"
-        android:textSize="14sp"
-        android:layout_width="match_parent"
+    <ScrollView
+        android:id="@+id/scroll_view"
+        android:layout_width="wrap_content"
         android:layout_height="match_parent"
-        android:layout_marginLeft="10dp"
-        android:text="" />
+        android:scrollbars="none">
+
+        <HorizontalScrollView
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:layout_marginLeft="3dp"
+            android:layout_marginBottom="3dp"
+            android:fillViewport="true"
+            android:id="@+id/horizontal_scrollview" >
+
+            <LinearLayout
+                android:id="@+id/output"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:layout_marginBottom="5dp"
+                android:orientation="vertical">
+            </LinearLayout>
+
+        </HorizontalScrollView>
+
+    </ScrollView>
+
 </LinearLayout>

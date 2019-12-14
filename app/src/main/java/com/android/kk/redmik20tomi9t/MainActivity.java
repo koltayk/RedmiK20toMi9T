@@ -1,13 +1,25 @@
 package com.android.kk.redmik20tomi9t;
 
+import android.app.Activity;
+import android.content.Context;
+import android.graphics.Color;
 import android.os.Bundle;
+import android.text.TextUtils;
+import android.text.method.ScrollingMovementMethod;
+import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.View;
+import android.view.ViewGroup;
+import android.view.textclassifier.TextClassifier;
+import android.webkit.JavascriptInterface;
 import android.webkit.WebView;
+import android.webkit.WebViewClient;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.LinearLayout;
+import android.widget.ScrollView;
+import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
 
@@ -30,10 +42,7 @@ import java.util.zip.ZipOutputStream;
 
 public class MainActivity extends AppCompatActivity {
 
-    public static final String REDMI_K_20 = "'Redmi K20'";
-
     public enum State {
-        BEFORE,
         INIT,
         ACTION,
         REBOOT,
@@ -44,6 +53,8 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public static final String TAG = "kklog";
+
+    public static final String REDMI_K_20 = "'Redmi K20'";
     public static final String MOUNT_RW = "mount -o remount -rw /";
     public static final String MOUNT_VENDOR_RW = "mount -o remount -rw /vendor";
     public static final String MOUNT_RO = "mount -o remount -r /";
@@ -60,11 +71,14 @@ public class MainActivity extends AppCompatActivity {
     public static final String MIME = "text/html";
     public static final String ENCODING = "utf-8";
 
+    public static final String BLUE_SPACE = " ";    // üres sor a parancsok kimenete után, logfájlba nem kell
+
     public static final int BUFFER = 2048;
 
 //    public static final String PREF = "/sdcard/redmik20tomi9t"; //////////////// csak tesztelésre !!!!!!!!!!!!!!!!!!!!!!!!!!!
     public static final String PREF = "";
 
+    private LinearLayout screen;
     private LinearLayout checkBoxes;
     private CheckBox buildProp;
     private CheckBox bootLogo;
@@ -74,9 +88,10 @@ public class MainActivity extends AppCompatActivity {
     private LinearLayout ll;
     private LinearLayout rw;
     private LinearLayout ro;
+    private ScrollView scroll;
     private OutPutText outPutText = new OutPutText();
-    private WebView outPut;
-    private State state = State.BEFORE;
+    private LinearLayout outPut;
+    private State state = State.INIT;
     private String filesDir;
     private String bootLogoDir;
     private String logFilePath;
@@ -100,26 +115,18 @@ public class MainActivity extends AppCompatActivity {
             init();
         } catch (Exception e) {
             error(e);
-            return;
         }
-//        this.outPut.setWebViewClient(new WebViewClient() {
-//            @Override
-//            public void onPageFinished(WebView view, String url) {
-//                //use the param "view", and call getContentHeight in scrollTo
-//                view.scrollTo(0, Math.round(view.getContentHeight() * getResources().getDisplayMetrics().density));
-//            }
-//        });
-//        final WebView wv = this.outPut;
-//        this.outPut.setWebViewClient(new WebViewClient() {
-//            @Override
-//            public void onPageCommitVisible(WebView view, String url) {
-//                view.pageDown(true);
-//            }
-//        });
+    }
+
+    @Override
+    protected void onPostResume() {
+        super.onPostResume();
+        scrollDown();
     }
 
     private void init() throws IOException, InterruptedException {
         setContentView(R.layout.activity_main);
+        this.screen = this.findViewById(R.id.screen);
         this.bootLogo = this.findViewById(R.id.checkbox_bootlogo);
         this.bootAnimation = this.findViewById(R.id.checkbox_bootanimation);
         this.buildProp = this.findViewById(R.id.checkbox_buildprop);
@@ -128,27 +135,28 @@ public class MainActivity extends AppCompatActivity {
         this.ll = this.findViewById(R.id.ll);
         this.rw = this.findViewById(R.id.rw);
         this.ro = this.findViewById(R.id.ro);
-        this.outPut = this.findViewById(R.id.output);
-        this.checkBoxes = this.findViewById(R.id.checkBocxes);
+        this.checkBoxes = this.findViewById(R.id.checkBoxes);
         this.checkBoxes.removeAllViews();
+        this.outPut = this.findViewById(R.id.output);
+        this.scroll = this.findViewById(R.id.scroll_view);
 
         this.filesDir = getFilesDir ().getPath() + "/";
         this.outPutText.text = "";
         final String logDir = filesDir + "log/";
-        try {
-            this.user = cmd("sh", "whoami", false).replace("\n", "");
-            cmd("mkdir -m 777 " + logDir, true);
-            cmd("chown " + this.user + ":" + this.user + " " + logDir);
-        } catch (Exception e) {
-            error(e);
-            return;
-        }
         Format formatter = new SimpleDateFormat("yyyy-MM-dd_HH:mm:ss");
         String date = formatter.format(new Date());
         logFilePath = logDir + date + ".html";
         File logFile = new File (logFilePath);
         this.logWriter = new FileWriter(logFile);
         logWriter.write(HTMLB);
+        try {
+            this.user = cmd("sh", "whoami", false, false).replace("\n", "");
+            cmd("mkdir -m 777 " + logDir, true);
+            cmd("chown " + this.user + ":" + this.user + " " + logDir);
+        } catch (Exception e) {
+            error(e);
+            return;
+        }
         try  {
             String suRet = cmd("whoami");
         }
@@ -159,7 +167,6 @@ public class MainActivity extends AppCompatActivity {
         this.cameraDir = this.filesDir + "Camera";
         cmd("mkdir -m 777 " + cameraDir, true);
         cmd("chown " + this.user + ":" + this.user + " " + cameraDir);
-        state = State.INIT;
         File toZip = new File(this.cameraDir);
         final File zipfile = zipFolder(toZip);
         Log.d(TAG, "zipfile: " +zipfile.getAbsolutePath());
@@ -218,7 +225,7 @@ public class MainActivity extends AppCompatActivity {
     private void error(Exception e) {
         e.printStackTrace();
         errorMsg = e.getMessage();
-        appendOutPut(errorMsg, "red");
+        appendOutPut(errorMsg, Color.RED);
         state = State.ERROR;
         Button cancel = findViewById(R.id.btnCancel);
         doSetVisibility(findViewById(R.id.btnSubmit), View.INVISIBLE);
@@ -233,9 +240,7 @@ public class MainActivity extends AppCompatActivity {
                 return;
 
             case REBOOT:
-                logWriter.write(HTMLE);
-                logWriter.close();
-                cmd("reboot");
+                cmd("reboot", true, true);
                 return;
         }
         new Thread() {  // külön thread-ben a feldolgozás, hogy az UI azonnal frissülhessen
@@ -257,7 +262,6 @@ public class MainActivity extends AppCompatActivity {
         doSetVisibility(cancel, View.INVISIBLE);
         String ret;
         boolean reboot = false;
-        boolean unzip = false;
         boolean rw = false;
         try {
             cmd(MOUNT_RW);
@@ -284,13 +288,13 @@ public class MainActivity extends AppCompatActivity {
                     }
                     else {
                         errorMsg = "bootlogo fájl hossza " + fileLength + " és " + BOOTLOGO + " hossza " + blockLength + " nem egyezik";
-                        appendOutPut(errorMsg, "red");
+                        appendOutPut(errorMsg, Color.RED);
                         throw new RuntimeException(errorMsg);
                     }
                 }
                 else {
                     errorMsg = "hibás bootlogo";
-                    appendOutPut(errorMsg, "red");
+                    appendOutPut(errorMsg, Color.RED);
                     throw new RuntimeException(errorMsg);
                 }
             }
@@ -328,7 +332,6 @@ public class MainActivity extends AppCompatActivity {
         }
         catch (Exception e) {
             error(e);
-//            Toast.makeText(this, "Porszem került a gépezetbe: " + e.getMessage(), Toast.LENGTH_SHORT).show();
         }
         finally {
             if (rw) {
@@ -340,7 +343,8 @@ public class MainActivity extends AppCompatActivity {
 
         switch (state) {
             case REBOOT:
-                appendOutPut("<br>hibát nem találtam, " + (reboot? "jöhet egy reboot": "kiléphetsz"), "green");
+                appendOutPut("\nhibát nem találtam, " + (reboot? "jöhet egy reboot": "kiléphetsz"), Color.GREEN);
+                appendOutPut(" ", Color.GREEN);
                 if (reboot) {
                     doSetVisibility(view, View.VISIBLE);
                     doSetText((Button) view, "reboot");
@@ -348,14 +352,14 @@ public class MainActivity extends AppCompatActivity {
                 break;
 
             case ERROR:
-                appendOutPut("<br>Porszem került a gépezetbe: " + errorMsg, "red");
+                appendOutPut("\nPorszem került a gépezetbe: " + errorMsg, Color.RED);
                 break;
         }
         doSetVisibility(cancel, View.VISIBLE);
         doSetText(cancel, "kilép");
     }
 
-    private String getRes(int res, String typ) throws IOException, InterruptedException {
+    private String getRes(int res, String typ) throws IOException {
         String ret;
         InputStream rawWatermark = getResources().openRawResource(res);
         String watermarkFileName = getResources().getResourceEntryName(res) + typ;
@@ -444,8 +448,7 @@ public class MainActivity extends AppCompatActivity {
 
     public void onClickCancel(View view) throws IOException {
         Log.d(TAG, "onClickCancel: " + view.getTag());
-        logWriter.write(HTMLE);
-        logWriter.close();
+        appendOutPut(((Button)view).getText().toString(), Color.GREEN, true);
         finish();
     }
 
@@ -463,16 +466,20 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private String cmd(String command) throws IOException, InterruptedException {
-        return cmd("su", command, false);
+        return cmd("su", command, false, false);
     }
 
     private String cmd(String command, boolean ignoreError) throws IOException, InterruptedException {
-        return cmd("su", command, ignoreError);
+        return cmd("su", command, ignoreError, false);
     }
 
-    private String cmd(String sh, String command, boolean ignoreError) throws IOException, InterruptedException {
+    private String cmd(String command, boolean ignoreError, final boolean closeLog) throws IOException, InterruptedException {
+        return cmd("su", command, ignoreError, closeLog);
+    }
+
+    private String cmd(String sh, String command, boolean ignoreError, final boolean closeLog) throws IOException, InterruptedException {
         Log.d(TAG, command);
-        appendOutPut(command, "black");
+        appendOutPut(command, Color.BLACK, closeLog);
         Process process = Runtime.getRuntime().exec(new String[]{sh, "-c", command});
         process.waitFor();
         String errStream = readFullyAsString(process.getErrorStream(), Charset.defaultCharset().name());
@@ -480,43 +487,81 @@ public class MainActivity extends AppCompatActivity {
         Log.d(TAG, outStream);
         Log.d(TAG, errStream);
         if (process.exitValue() != 0 && !ignoreError) {
-            appendOutPut(errStream, "red");
+            appendOutPut(errStream, Color.RED, closeLog);
             throw new RuntimeException("hiba a következő parancsban: " + command + ", hibaüzenet: " + errStream);
         }
         String ret = outStream + errStream;
-        appendOutPut(ret, "blue");
+        appendOutPut(ret, Color.BLUE, closeLog);
+        if (!ret.replace("\n","").isEmpty()) {
+        appendOutPut(" ", Color.BLUE, closeLog);
+        }
         return ret;
     }
 
-    private void appendOutPut(final String text, final String color) {
-        final OutPutText mainOutPutText = this.outPutText;
-        final WebView mainOutPut = this.outPut;
-        this.runOnUiThread(new Runnable() {
-            private OutPutText outPutText = mainOutPutText;
-            private WebView outPut = mainOutPut;
+    private void appendOutPut(final String text, final int color) {
+        appendOutPut(text, color, false);
+    }
 
+    private void appendOutPut(final String text, final int color, final boolean closeLog) {
+        this.runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                final String textHtml = "<nobr><font color=\"" + color + "\">" + text.replace("\n", "<br>") + "</font></nobr><br>";
-                this.outPutText.text += textHtml;
-                final String data = HTMLB + this.outPutText.text + HTMLE;
-                this.outPut.loadDataWithBaseURL(null, data, MIME, ENCODING, null);
-//                this.outPut.scrollTo(0, Math.round(this.outPut.getContentHeight() * getResources().getDisplayMetrics().density));
-                try {
-                    try  {
+                TextView tv = new TextView(MainActivity.this);
+                tv.setTextColor(color);
+                tv.setText(text);
+                tv.setTextSize((float) 12);
+                ViewGroup.LayoutParams layoutParams = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,LinearLayout.LayoutParams.MATCH_PARENT);
+                tv.setLayoutParams(layoutParams);
+                tv.setSingleLine();
+                tv.setHorizontallyScrolling(true);
+                tv.setSelected(true);
+                tv.setMovementMethod(new ScrollingMovementMethod());
+                outPut.addView(tv);
+                scrollDown();
+                if (logWriter != null && !text.equals(BLUE_SPACE)) {
+                    final String textHtml = "<nobr><font color=\"" + htmlColor(color) + "\">" + text.replace("\n", "<br>") + "</font></nobr><br>";
+                    try {
                         MainActivity.this.logWriter.write(textHtml + "\n");
                     }
                     catch (Exception e) {
+                        error(e);
+                    }
+                }
+                if (closeLog) {
+                    try {
+                        logWriter.write(HTMLE);
+                        logWriter.close();
+                        logWriter = null;
+                    } catch (IOException e) {
                         e.printStackTrace();
                     }
-//                    Process process = Runtime.getRuntime().exec(new String[]{"sh", "-c", "echo '" + data + "' > " + logFilePath});
-//                    process.waitFor();
-                }
-                catch (Exception e) {
-                    error(e);
+
                 }
             }
         });
+    }
+
+    private void scrollDown() {
+        scroll.postDelayed(new Runnable() {
+            @Override
+            public void run() { // csak késleltetve megy a legvégére
+                scroll.fullScroll(ScrollView.FOCUS_DOWN);
+            }
+        },200);
+    }
+
+    public static String htmlColor(int color) {
+        switch (color) {
+            case Color.BLACK:
+                return "black";
+            case Color.BLUE:
+                return "blue";
+            case Color.RED:
+                return "red";
+            case Color.GREEN:
+                return "green";
+        }
+        return "";
     }
 
     public static String readFullyAsString(InputStream inputStream, String encoding) throws IOException {
@@ -600,7 +645,6 @@ public class MainActivity extends AppCompatActivity {
     private static void zipSubFolder(ZipOutputStream out, File folder, int basePathLength) throws IOException {
 
         File[] fileList = folder.listFiles();
-        BufferedInputStream origin = null;
         for (File file : fileList) {
             if (file.isDirectory()) {
                 zipSubFolder(out, file, basePathLength);
@@ -611,7 +655,7 @@ public class MainActivity extends AppCompatActivity {
                 String relativePath = unmodifiedFilePath.substring(basePathLength + 1);
 
                 FileInputStream fi = new FileInputStream(unmodifiedFilePath);
-                origin = new BufferedInputStream(fi, BUFFER);
+                BufferedInputStream origin = new BufferedInputStream(fi, BUFFER);
 
                 ZipEntry entry = new ZipEntry(relativePath);
                 entry.setTime(file.lastModified()); // to keep modification time after unzipping
