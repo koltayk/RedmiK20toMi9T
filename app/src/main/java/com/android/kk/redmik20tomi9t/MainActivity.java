@@ -126,6 +126,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void init() throws IOException, InterruptedException {
         setContentView(R.layout.activity_main);
+
         this.screen = this.findViewById(R.id.screen);
         this.bootLogo = this.findViewById(R.id.checkbox_bootlogo);
         this.bootAnimation = this.findViewById(R.id.checkbox_bootanimation);
@@ -140,34 +141,30 @@ public class MainActivity extends AppCompatActivity {
         this.outPut = this.findViewById(R.id.output);
         this.scroll = this.findViewById(R.id.scroll_view);
 
+        try {
+            this.user = cmd("sh", "whoami", false, false).replace("\n", "");
+        } catch (Exception e) {
+            error(e);
+            return;
+        }
+
         this.filesDir = getFilesDir ().getPath() + "/";
         this.outPutText.text = "";
         final String logDir = filesDir + "log/";
+        cmd("mkdir -m 777 " + logDir, true);
+        cmd("chown " + this.user + ":" + this.user + " " + logDir);
         Format formatter = new SimpleDateFormat("yyyy-MM-dd_HH:mm:ss");
         String date = formatter.format(new Date());
         logFilePath = logDir + date + ".html";
         File logFile = new File (logFilePath);
         this.logWriter = new FileWriter(logFile);
         logWriter.write(HTMLB);
-        try {
-            this.user = cmd("sh", "whoami", false, false).replace("\n", "");
-            cmd("mkdir -m 777 " + logDir, true);
-            cmd("chown " + this.user + ":" + this.user + " " + logDir);
-        } catch (Exception e) {
-            error(e);
-            return;
-        }
-        try  {
-            String suRet = cmd("whoami");
-        }
-        catch (Exception e) {
-            error(e);
-            return;
-        }
+
         this.cameraDir = this.filesDir + "Camera";
         cmd("mkdir -m 777 " + cameraDir, true);
         cmd("chown " + this.user + ":" + this.user + " " + cameraDir);
         File toZip = new File(this.cameraDir);
+
         final File zipfile = zipFolder(toZip);
         Log.d(TAG, "zipfile: " +zipfile.getAbsolutePath());
         InputStream rawBootLogo = getResources().openRawResource(R.raw.bootlogo9t);
